@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Test - DramaBox</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .loading { color: #007bff; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 CORS Test - DramaBox API</h1>
+    <p>Halaman ini untuk menguji apakah masalah CORS sudah teratasi.</p>
+
+    <div class="test-section">
+        <h3>Test API Endpoints</h3>
+        <button onclick="testEndpoint('dramabox/randomdrama')">Test Random Drama</button>
+        <button onclick="testEndpoint('dramabox/foryou')">Test For You</button>
+        <button onclick="testEndpoint('dramabox/latest')">Test Latest</button>
+        <button onclick="testEndpoint('dramabox/trending')">Test Trending</button>
+        <button onclick="testEndpoint('dramabox/populersearch')">Test Popular Search</button>
+        <button onclick="testSearch()">Test Search "cinta"</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Results</h3>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Instructions</h3>
+        <ol>
+            <li>Jika semua test menampilkan <span class="success">SUCCESS</span>, maka CORS sudah teratasi</li>
+            <li>Jika masih ada error CORS, lakukan hard refresh (Ctrl+F5) pada browser</li>
+            <li>Buka aplikasi utama di: <a href="index.html">DramaBox App</a></li>
+        </ol>
+    </div>
+
+    <script>
+        function addResult(endpoint, status, message, data = null) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <strong>${endpoint}:</strong>
+                <span class="${status === 'SUCCESS' ? 'success' : status === 'LOADING' ? 'loading' : 'error'}">
+                    ${status}
+                </span>
+                ${message ? ` - ${message}` : ''}
+                ${data ? `<br><pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+                <hr>
+            `;
+            results.appendChild(div);
+        }
+
+        async function testEndpoint(endpoint) {
+            addResult(endpoint, 'LOADING', 'Testing...');
+
+            try {
+                const response = await fetch(`/api/${endpoint}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    addResult(endpoint, 'SUCCESS', `Status: ${response.status}`, data);
+                } else {
+                    addResult(endpoint, 'ERROR', `Status: ${response.status}`, data);
+                }
+            } catch (error) {
+                addResult(endpoint, 'ERROR', error.message);
+            }
+        }
+
+        async function testSearch() {
+            const endpoint = 'dramabox/search?query=cinta';
+            addResult(endpoint, 'LOADING', 'Testing search...');
+
+            try {
+                const response = await fetch(`/api/${endpoint}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    addResult(endpoint, 'SUCCESS', `Status: ${response.status} - Found ${data.length} results`, data);
+                } else {
+                    addResult(endpoint, 'ERROR', `Status: ${response.status}`, data);
+                }
+            } catch (error) {
+                addResult(endpoint, 'ERROR', error.message);
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            addResult('Page Load', 'INFO', 'CORS Test page loaded successfully. Click buttons above to test API endpoints.');
+        });
+    </script>
+</body>
+</html>

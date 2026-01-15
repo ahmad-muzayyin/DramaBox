@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode List - DramaBox</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="episodes-page">
+        <!-- Header -->
+        <header class="episodes-header">
+            <div class="header-content">
+                <button class="btn btn-secondary" onclick="goBack()">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Kembali</span>
+                </button>
+                <div class="drama-info-header">
+                    <div class="drama-cover">
+                        <img id="drama-cover" src="" alt="Drama Cover">
+                    </div>
+                    <div class="drama-details">
+                        <h4 id="drama-title">Loading...</h4>
+                    <br>
+                        <div class="drama-meta">
+                            <span id="episode-count">0 Episode</span>
+                            <span id="drama-rating">Rating: N/A</span>
+                        </div>
+                        <div class="drama-tags" id="drama-tags">
+                            <!-- Tags will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="playFirstEpisode()">
+                        <i class="fas fa-play-circle"></i>
+                        <span>Mainkan Episode 1</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadAllEpisodes()">
+                        <i class="fas fa-download"></i>
+                        <span>Download Semua Video</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Episodes Layout -->
+        <main class="episodes-main">
+            <div class="episodes-container">
+                <h2 class="section-title">
+                    <i class="fas fa-list"></i>
+                    Daftar Episode Lengkap
+                </h2>
+                <div id="episodes-layout" class="episodes-layout">
+                    <!-- Featured episode (large card) -->
+                    <div id="featured-episode" class="featured-episode">
+                        <!-- Featured episode will be populated here -->
+                    </div>
+
+                    <!-- Episodes list (small cards) -->
+                    <div id="episodes-sidebar" class="episodes-sidebar">
+                        <div class="sidebar-header">
+                            <h3>Daftar Episode</h3>
+                            <span id="total-episodes" class="total-count">0 Episode</span>
+                        </div>
+                        <div id="episodes-list" class="episodes-list">
+                            <!-- Episodes will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Episode Detail Modal -->
+        <div id="episode-modal" class="episode-modal">
+            <div class="episode-modal-content">
+                <div class="episode-modal-header">
+                    <div class="episode-info">
+                        <h3 id="modal-episode-title">Episode Title</h3>
+                        <p id="modal-episode-description">Episode description</p>
+                    </div>
+                    <button class="close-modal-btn" onclick="closeEpisodeModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="episode-modal-body">
+                    <div class="video-container">
+                        <video id="episode-video-player" controls class="episode-video-player">
+                            Browser Anda tidak mendukung tag video.
+                        </video>
+                    </div>
+                    <div class="episode-actions">
+                        <button class="btn btn-secondary" onclick="playPreviousEpisode()">
+                            <i class="fas fa-chevron-left"></i>
+                            Episode Sebelumnya
+                        </button>
+                        <button class="btn btn-secondary" onclick="playNextEpisode()">
+                            Episode Selanjutnya
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Memuat episode...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+    <script src="episodes.js"></script>
+</body>
+</html>
