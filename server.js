@@ -1,240 +1,106 @@
-const http = require('http');
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
-const url = require('url');
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const PORT = process.env.PORT || 3000;
-const HOST = 'localhost';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// MIME types for different file extensions
-const MIME_TYPES = {
-    '.html': 'text/html',
-    '.css': 'text/css',
-    '.js': 'text/javascript',
-    '.json': 'application/json',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.svg': 'image/svg+xml',
-    '.ico': 'image/x-icon'
+const app = express();
+const PORT = 3001;
+const DB_FILE = path.join(__dirname, 'db.json');
+
+app.use(cors());
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
+
+// Initialize DB if not exists
+if (!fs.existsSync(DB_FILE)) {
+    const initialData = {
+        config: {
+            isFreeApp: false,
+            enableAds: true,
+            adProvider: 'google',
+            adsterraKey: '',
+            googleAdsClient: ''
+        },
+        members: [
+            { id: 1, username: 'user', email: 'user@example.com', password: 'user', role: 'member', lastDailyCheck: null, expiryDate: null, joinDate: '2023-10-01', status: 'active' },
+            { id: 2, username: 'ahmad', email: 'ahmad@example.com', password: '123', role: 'vip', lastDailyCheck: null, expiryDate: '2025-12-31', joinDate: '2023-11-15', status: 'active' },
+            { id: 3, username: 'siti_nurbaya', email: 'siti@example.com', password: '123', role: 'member', lastDailyCheck: null, expiryDate: null, joinDate: '2023-12-05', status: 'suspended' },
+            { id: 4, username: 'budi_doremi', email: 'budi@example.com', password: '123', role: 'member', lastDailyCheck: null, expiryDate: null, joinDate: '2024-01-10', status: 'active' },
+            { id: 5, username: 'premium_user', email: 'vip@example.com', password: '123', role: 'vip', lastDailyCheck: null, expiryDate: '2024-12-31', joinDate: '2024-01-12', status: 'active' }
+        ]
+    };
+    fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
+}
+
+// Helper to read DB
+const readDb = () => {
+    try {
+        const data = fs.readFileSync(DB_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (err) {
+        return { config: {}, members: [] };
+    }
 };
 
-const server = http.createServer((req, res) => {
-    const parsedUrl = url.parse(req.url, true);
-    let pathname = parsedUrl.pathname;
+// Helper to write DB
+const writeDb = (data) => {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+};
 
-    // API Proxy for DramaBox API
-    if (pathname.startsWith('/api/')) {
-        const apiPath = pathname.replace('/api/', '');
-        const targetUrl = `https://dramabox.sansekai.my.id/api/${apiPath}`;
+// --- ROUTES ---
 
-        // Parse query parameters
-        const queryString = parsedUrl.search || '';
+// Get Config
+app.get('/api/config', (req, res) => {
+    const db = readDb();
+    res.json(db.config);
+});
 
-        proxyRequest(targetUrl + queryString, req, res);
-        return;
+// Update Config
+app.post('/api/config', (req, res) => {
+    const db = readDb();
+    db.config = { ...db.config, ...req.body };
+    writeDb(db);
+    res.json(db.config);
+});
+
+// Get Members
+app.get('/api/members', (req, res) => {
+    const db = readDb();
+    res.json(db.members);
+});
+
+// Add/Update Member
+app.post('/api/members', (req, res) => {
+    const db = readDb();
+    const newMember = req.body;
+
+    if (newMember.id) {
+        // Update existing
+        db.members = db.members.map(m => m.id === newMember.id ? newMember : m);
+    } else {
+        // Create new
+        newMember.id = Date.now();
+        db.members.push(newMember);
     }
 
-    // Default to index.html for root path
-    if (pathname === '/' || pathname === '') {
-        pathname = '/index.html';
-    }
-
-    // Security: Prevent directory traversal
-    if (pathname.includes('..') || pathname.includes('\\')) {
-        res.writeHead(403, { 'Content-Type': 'text/plain' });
-        res.end('Forbidden');
-        return;
-    }
-
-    const filePath = path.join(__dirname, pathname);
-
-    fs.stat(filePath, (err, stats) => {
-        if (err) {
-            if (err.code === 'ENOENT') {
-                // File not found
-                res.writeHead(404, { 'Content-Type': 'text/html' });
-                res.end(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>404 - File Not Found</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #121212; color: #fff; }
-                            h1 { color: #ff6b6b; }
-                            a { color: #4ecdc4; text-decoration: none; }
-                        </style>
-                    </head>
-                    <body>
-                        <h1>404 - File Not Found</h1>
-                        <p>The requested file <strong>${pathname}</strong> was not found.</p>
-                        <p><a href="/">Go back to DramaBox</a></p>
-                    </body>
-                    </html>
-                `);
-            } else {
-                res.writeHead(500, { 'Content-Type': 'text/plain' });
-                res.end('Internal Server Error');
-            }
-            return;
-        }
-
-        if (stats.isDirectory()) {
-            // If it's a directory, serve index.html
-            const indexPath = path.join(filePath, 'index.html');
-            fs.stat(indexPath, (err, indexStats) => {
-                if (!err && indexStats.isFile()) {
-                    serveFile(indexPath, res);
-                } else {
-                    res.writeHead(403, { 'Content-Type': 'text/plain' });
-                    res.end('Directory listing not allowed');
-                }
-            });
-        } else {
-            serveFile(filePath, res);
-        }
-    });
+    writeDb(db);
+    res.json(newMember);
 });
 
-function serveFile(filePath, res) {
-    const ext = path.extname(filePath);
-    const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
-
-    fs.readFile(filePath, (err, data) => {
-        if (err) {
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('Internal Server Error');
-            return;
-        }
-
-        // Add cache-busting for JavaScript files during development
-        const cacheControl = mimeType === 'text/javascript'
-            ? 'no-cache, no-store, must-revalidate'
-            : 'public, max-age=31536000';
-
-        res.writeHead(200, {
-            'Content-Type': mimeType,
-            'Cache-Control': cacheControl,
-            'Access-Control-Allow-Origin': '*'
-        });
-        res.end(data);
-    });
-}
-
-function proxyRequest(targetUrl, clientReq, clientRes) {
-    const parsedUrl = url.parse(targetUrl);
-
-    const options = {
-        hostname: parsedUrl.hostname,
-        port: 443,
-        path: parsedUrl.path,
-        method: clientReq.method,
-        headers: {
-            'User-Agent': 'DramaBox-Proxy/1.0',
-            'Accept': '*/*',
-            ...clientReq.headers
-        }
-    };
-
-    // Remove hop-by-hop headers
-    delete options.headers['host'];
-    delete options.headers['connection'];
-    delete options.headers['keep-alive'];
-    delete options.headers['proxy-authenticate'];
-    delete options.headers['proxy-authorization'];
-    delete options.headers['te'];
-    delete options.headers['trailers'];
-    delete options.headers['transfer-encoding'];
-    delete options.headers['upgrade'];
-
-    const proxyReq = https.request(options, (proxyRes) => {
-        // Copy response headers
-        const responseHeaders = { ...proxyRes.headers };
-
-        // Add CORS headers
-        responseHeaders['Access-Control-Allow-Origin'] = '*';
-        responseHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-        responseHeaders['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
-
-        clientRes.writeHead(proxyRes.statusCode, responseHeaders);
-
-        // Pipe the response
-        proxyRes.pipe(clientRes);
-    });
-
-    proxyReq.on('error', (err) => {
-        console.error('Proxy request error:', err);
-        clientRes.writeHead(500, {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        });
-        clientRes.end(JSON.stringify({
-            error: 'Failed to fetch from API',
-            message: err.message
-        }));
-    });
-
-    // Pipe the request body if any
-    clientReq.pipe(proxyReq);
-
-    // Handle request timeout
-    proxyReq.setTimeout(30000, () => {
-        proxyReq.destroy();
-        clientRes.writeHead(504, {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        });
-        clientRes.end(JSON.stringify({
-            error: 'Request timeout',
-            message: 'API request took too long'
-        }));
-    });
-}
-
-server.listen(PORT, HOST, () => {
-    console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║                     🎬 DRAMA BOX STREAMING                     ║
-╠══════════════════════════════════════════════════════════════╣
-║                                                              ║
-║  Server is running at: http://${HOST}:${PORT}                   ║
-║                                                              ║
-║  ✅ CORS Fixed - API Proxy enabled                           ║
-║  📡 API Source: https://dramabox.sansekai.my.id/api         ║
-║                                                              ║
-║  Features:                                                   ║
-║  • Random Drama                                              ║
-║  • For You (Personalized)                                    ║
-║  • Latest Drama                                              ║
-║  • Trending Drama                                            ║
-║  • Popular Search                                            ║
-║  • Search Functionality                                      ║
-║  • Video Player with Episodes                                ║
-║                                                              ║
-║  Press Ctrl+C to stop the server                            ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-    `);
+// Delete Member
+app.delete('/api/members/:id', (req, res) => {
+    const db = readDb();
+    const id = parseInt(req.params.id);
+    db.members = db.members.filter(m => m.id !== id);
+    writeDb(db);
+    res.json({ success: true });
 });
 
-// Handle server shutdown gracefully
-process.on('SIGINT', () => {
-    console.log('\n\nShutting down DramaBox server...');
-    server.close(() => {
-        console.log('Server stopped.');
-        process.exit(0);
-    });
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
-    process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    process.exit(1);
+app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
 });
