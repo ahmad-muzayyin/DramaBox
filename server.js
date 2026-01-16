@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -99,6 +100,30 @@ app.delete('/api/members/:id', (req, res) => {
     db.members = db.members.filter(m => m.id !== id);
     writeDb(db);
     res.json({ success: true });
+});
+
+// --- DRAMA API PROXY ---
+app.get('/api/dramabox/*', async (req, res) => {
+    try {
+        const fullPath = req.params[0];
+        const queryString = req.url.split('?')[1] || '';
+        const targetUrl = `https://dramabox.sansekai.my.id/api/dramabox/${fullPath}${queryString ? '?' + queryString : ''}`;
+
+        console.log(`Proxying request to: ${targetUrl}`);
+
+        const response = await axios.get(targetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+            }
+        });
+        res.json(response.data);
+    } catch (err) {
+        console.error('Proxy Error:', err.message);
+        res.status(err.response?.status || 500).json({
+            error: 'Failed to fetch drama data',
+            details: err.message
+        });
+    }
 });
 
 app.listen(PORT, () => {

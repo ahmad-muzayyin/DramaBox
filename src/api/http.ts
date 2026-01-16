@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create Axios instance
 const http = axios.create({
-    baseURL: 'http://35.193.10.17/api', // Use absolute URL for APK/Production
+    baseURL: 'http://35.193.10.17:3001/api', // Use absolute URL with port 3001 for APK
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
