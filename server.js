@@ -103,9 +103,9 @@ app.delete('/api/members/:id', (req, res) => {
 });
 
 // --- DRAMA API PROXY ---
-app.get('/api/dramabox/:path*', async (req, res) => {
+app.get(/\/api\/dramabox\/(.*)/, async (req, res) => {
     try {
-        const fullPath = req.params.path || '';
+        const fullPath = req.params[0] || '';
         const queryString = req.url.split('?')[1] || '';
         const targetUrl = `https://dramabox.sansekai.my.id/api/dramabox/${fullPath}${queryString ? '?' + queryString : ''}`;
 
