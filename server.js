@@ -103,7 +103,7 @@ app.delete('/api/members/:id', (req, res) => {
 });
 
 // --- DRAMA API PROXY ---
-app.get('/api/dramabox/*', async (req, res) => {
+app.get('/api/dramabox/(.*)', async (req, res) => {
     try {
         const fullPath = req.params[0];
         const queryString = req.url.split('?')[1] || '';
@@ -126,6 +126,6 @@ app.get('/api/dramabox/*', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}`);
 });
